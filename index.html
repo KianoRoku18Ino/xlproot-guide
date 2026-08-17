@@ -1,0 +1,1374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>XLProot Guide — Real Linux on Android, Without the Guesswork</title>
+<meta name="description" content="A beginner-friendly, device-agnostic guide to running a real Linux desktop on Android via PRoot, built on XoDos-Ark — prerequisites, install steps, the banking-app conflict, and known issues.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0A0F11;
+    --bg-soft: #0E1517;
+    --surface: #131C1F;
+    --surface-2: #172225;
+    --border: #223036;
+    --border-soft: #1B2529;
+    --text-hi: #EBF3F2;
+    --text: #C3D2D1;
+    --text-dim: #8CA09E;
+    --text-faint: #5B6D6B;
+    --accent: #5FD3C4;
+    --accent-strong: #38A697;
+    --accent-wash: rgba(95,211,196,0.08);
+    --warn: #E3AA45;
+    --warn-wash: rgba(227,170,69,0.09);
+    --danger: #DD6A44;
+    --danger-wash: rgba(221,106,68,0.10);
+    --display: 'Space Grotesk', sans-serif;
+    --body: 'IBM Plex Sans', sans-serif;
+    --mono: 'JetBrains Mono', monospace;
+    --radius: 12px;
+  }
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto;}
+    *{animation-duration:0.01ms !important; animation-iteration-count:1 !important; transition-duration:0.01ms !important;}
+  }
+
+  body{
+    margin:0;
+    background:
+      radial-gradient(ellipse 900px 500px at 15% -10%, rgba(95,211,196,0.07), transparent 60%),
+      radial-gradient(ellipse 700px 500px at 100% 10%, rgba(221,106,68,0.05), transparent 55%),
+      var(--bg);
+    color:var(--text);
+    font-family:var(--body);
+    font-size:16px;
+    line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  a{color:var(--accent); text-decoration:none;}
+  a:hover{text-decoration:underline;}
+  a:focus-visible, button:focus-visible, summary:focus-visible{
+    outline:2px solid var(--accent); outline-offset:2px; border-radius:4px;
+  }
+
+  h1,h2,h3,h4{font-family:var(--display); color:var(--text-hi); font-weight:600; margin:0;}
+  p{margin:0 0 1rem 0;}
+  ul, ol{margin:0 0 1rem 0; padding-left:1.3rem;}
+  li{margin-bottom:.4rem;}
+  code{font-family:var(--mono); font-size:.9em; background:var(--surface-2); padding:.1em .4em; border-radius:5px; color:var(--accent);}
+
+  .wrap{max-width:780px; margin:0 auto; padding:0 1.5rem;}
+
+  /* ============ TOP NAV ============ */
+  .topbar{
+    position:sticky; top:0; z-index:50;
+    background:rgba(10,15,17,0.85);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--border-soft);
+  }
+  .topbar-inner{
+    max-width:1180px; margin:0 auto; padding:0 1.5rem;
+    display:flex; align-items:center; justify-content:space-between; gap:1rem;
+    height:56px;
+  }
+  .brand{
+    font-family:var(--display); font-weight:700; font-size:1rem; color:var(--text-hi);
+    white-space:nowrap; letter-spacing:-.01em;
+  }
+  .brand span{color:var(--accent);}
+  .topnav{
+    display:flex; gap:1.4rem; overflow-x:auto; scrollbar-width:none;
+    font-family:var(--mono); font-size:.78rem; text-transform:uppercase; letter-spacing:.04em;
+  }
+  .topnav::-webkit-scrollbar{display:none;}
+  .topnav a{color:var(--text-dim); white-space:nowrap; padding:.3rem 0; border-bottom:2px solid transparent;}
+  .topnav a:hover{color:var(--text-hi); text-decoration:none;}
+  .topnav a.active{color:var(--accent); border-color:var(--accent);}
+
+  /* ============ STACK RAIL (signature element) ============ */
+  .stack-rail{
+    position:fixed; left:2rem; top:50%; transform:translateY(-50%);
+    z-index:40; display:flex; flex-direction:column; align-items:flex-start;
+  }
+  .stack-rail .rail-line{
+    position:absolute; left:5px; top:6px; bottom:6px; width:1px; background:var(--border);
+  }
+  .stack-rail ol{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:1.15rem;}
+  .stack-rail li{margin:0;}
+  .stack-rail button{
+    background:none; border:none; cursor:pointer; display:flex; align-items:center; gap:.65rem;
+    padding:0; font-family:var(--mono); color:var(--text-faint); font-size:.72rem;
+  }
+  .stack-rail .node{
+    width:11px; height:11px; border-radius:50%; background:var(--bg-soft);
+    border:1.5px solid var(--border); flex:none; transition:all .25s ease;
+  }
+  .stack-rail .lbl{
+    opacity:0; transform:translateX(-6px); transition:all .25s ease; white-space:nowrap;
+    letter-spacing:.03em;
+  }
+  .stack-rail li:hover .lbl{opacity:1; transform:translateX(0); color:var(--text-dim);}
+  .stack-rail li.active .node{background:var(--accent); border-color:var(--accent); box-shadow:0 0 0 4px var(--accent-wash);}
+  .stack-rail li.active .lbl{opacity:1; transform:translateX(0); color:var(--accent);}
+  @media (max-width: 1180px){ .stack-rail{display:none;} }
+
+  /* ============ HERO ============ */
+  .hero{padding:5rem 0 3.5rem;}
+  .eyebrow{
+    font-family:var(--mono); font-size:.78rem; text-transform:uppercase; letter-spacing:.08em;
+    color:var(--accent); display:flex; align-items:center; gap:.6rem; margin-bottom:1.4rem;
+  }
+  .eyebrow .dash{width:22px; height:1px; background:var(--accent);}
+  .hero h1{
+    font-size:clamp(2.1rem, 5.5vw, 3.2rem); line-height:1.08; letter-spacing:-.02em; margin-bottom:1.3rem;
+  }
+  .hero h1 em{font-style:normal; color:var(--accent);}
+  .hero .lede{font-size:1.08rem; color:var(--text); max-width:60ch; margin-bottom:2rem;}
+  .hero .lede strong{color:var(--text-hi); font-weight:600;}
+
+  .terminal{
+    background:#080C0D; border:1px solid var(--border); border-radius:var(--radius);
+    overflow:hidden; box-shadow:0 20px 60px -20px rgba(0,0,0,0.6);
+  }
+  .terminal-head{
+    display:flex; align-items:center; gap:.5rem; padding:.65rem .9rem;
+    background:var(--surface); border-bottom:1px solid var(--border-soft);
+  }
+  .terminal-head .dot{width:9px; height:9px; border-radius:50%;}
+  .terminal-head .dot:nth-child(1){background:#DD6A44;}
+  .terminal-head .dot:nth-child(2){background:#E3AA45;}
+  .terminal-head .dot:nth-child(3){background:#5FD3C4;}
+  .terminal-head span{font-family:var(--mono); font-size:.72rem; color:var(--text-faint); margin-left:.5rem;}
+  .terminal-body{
+    padding:1.3rem 1.4rem; font-family:var(--mono); font-size:.85rem; line-height:1.9;
+    min-height:220px;
+  }
+  .terminal-body .line{color:var(--text-dim);}
+  .terminal-body .prompt{color:var(--accent);}
+  .terminal-body .ok{color:var(--accent);}
+  .terminal-body .cursor{display:inline-block; width:7px; height:1em; background:var(--accent); vertical-align:middle; animation:blink 1s steps(1) infinite;}
+  @keyframes blink{50%{opacity:0;}}
+
+  .example-key{
+    display:flex; gap:.7rem; align-items:flex-start; margin-top:2rem;
+    padding:.9rem 1.1rem; border:1px dashed var(--border); border-radius:var(--radius);
+    font-size:.88rem; color:var(--text-dim);
+  }
+  .swap{border-bottom:1.5px dashed var(--accent); color:var(--accent); font-family:var(--mono); font-size:.92em;}
+
+  /* ============ SECTIONS ============ */
+  section{padding:3.2rem 0; border-top:1px solid var(--border-soft);}
+  .section-head{margin-bottom:1.8rem;}
+  .section-num{font-family:var(--mono); font-size:.78rem; color:var(--accent); letter-spacing:.06em; display:block; margin-bottom:.6rem;}
+  .section-head h2{font-size:clamp(1.5rem,3.2vw,1.9rem); letter-spacing:-.01em; margin-bottom:.6rem;}
+  .section-head .sub{color:var(--text-dim); font-size:.98rem; max-width:62ch;}
+
+  /* Architecture stack diagram */
+  .arch-diagram{margin:2rem 0; display:flex; flex-direction:column-reverse; gap:.5rem;}
+  .arch-layer{
+    display:flex; align-items:center; gap:.9rem; padding:.75rem 1rem;
+    background:var(--surface); border:1px solid var(--border); border-radius:9px;
+  }
+  .arch-layer .tag{
+    font-family:var(--mono); font-size:.68rem; color:var(--bg); background:var(--accent);
+    padding:.15rem .5rem; border-radius:5px; flex:none; font-weight:600;
+  }
+  .arch-layer .name{font-family:var(--display); font-weight:600; color:var(--text-hi); font-size:.92rem;}
+  .arch-layer .desc{color:var(--text-faint); font-size:.8rem;}
+  .arch-layer.host{border-color:var(--accent-strong);}
+
+  /* callouts */
+  .callout{
+    border-left:3px solid var(--accent); background:var(--accent-wash);
+    padding:1rem 1.2rem; border-radius:0 10px 10px 0; margin:1.5rem 0; font-size:.94rem;
+  }
+  .callout p:last-child{margin-bottom:0;}
+  .callout .head{font-family:var(--mono); font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; color:var(--accent); margin-bottom:.4rem; display:block;}
+  .callout.warn{border-color:var(--warn); background:var(--warn-wash);}
+  .callout.warn .head{color:var(--warn);}
+  .callout.danger{border-color:var(--danger); background:var(--danger-wash);}
+  .callout.danger .head{color:var(--danger);}
+
+  /* code blocks */
+  .code-block{
+    position:relative; background:#080C0D; border:1px solid var(--border);
+    border-radius:10px; margin:1.3rem 0; overflow:hidden;
+  }
+  .code-block-head{
+    display:flex; justify-content:space-between; align-items:center; padding:.5rem .9rem;
+    background:var(--surface); border-bottom:1px solid var(--border-soft);
+    font-family:var(--mono); font-size:.68rem; letter-spacing:.05em; text-transform:uppercase;
+    color:var(--text-faint);
+  }
+  .copy-btn{
+    font-family:var(--mono); font-size:.68rem; background:transparent; border:1px solid var(--border);
+    color:var(--text-dim); padding:.28rem .6rem; border-radius:6px; cursor:pointer; transition:all .15s;
+    text-transform:none; letter-spacing:0;
+  }
+  .copy-btn:hover{border-color:var(--accent); color:var(--accent);}
+  .copy-btn.copied{border-color:var(--accent); color:var(--accent); background:var(--accent-wash);}
+  pre{margin:0; padding:1rem 1.1rem; overflow-x:auto; font-family:var(--mono); font-size:.82rem; line-height:1.65; color:var(--text-hi);}
+  pre code{background:none; padding:0; color:inherit; font-size:1em;}
+
+  .path{font-family:var(--mono); font-size:.85rem; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:.7rem .9rem; display:block; color:var(--text-hi); margin:.8rem 0;}
+  .path .arrow{color:var(--text-faint); margin:0 .3rem;}
+
+  /* tables */
+  .tbl-wrap{overflow-x:auto; margin:1.3rem 0; border:1px solid var(--border); border-radius:10px;}
+  table{width:100%; border-collapse:collapse; font-size:.88rem; min-width:520px;}
+  th,td{padding:.75rem .9rem; border-bottom:1px solid var(--border-soft); text-align:left; vertical-align:top;}
+  th{font-family:var(--mono); font-size:.68rem; text-transform:uppercase; letter-spacing:.05em; color:var(--text-faint); background:var(--surface);}
+  tr:last-child td{border-bottom:none;}
+  td{color:var(--text);}
+  td strong{color:var(--text-hi);}
+
+  /* details/accordion steps */
+  details.step{
+    border:1px solid var(--border); border-radius:10px; margin-bottom:.85rem; background:var(--surface);
+    overflow:hidden;
+  }
+  details.step[open]{border-color:var(--border);}
+  details.step > summary{
+    cursor:pointer; padding:1rem 1.2rem; font-family:var(--display); font-weight:600; font-size:.98rem;
+    display:flex; gap:.85rem; align-items:center; list-style:none; color:var(--text-hi);
+  }
+  details.step > summary::-webkit-details-marker{display:none;}
+  details.step > summary .step-num{
+    font-family:var(--mono); font-size:.75rem; color:var(--accent); background:var(--accent-wash);
+    border-radius:6px; padding:.15rem .5rem; flex:none;
+  }
+  details.step > summary::after{
+    content:'+'; margin-left:auto; color:var(--text-faint); font-size:1.2rem; font-family:var(--mono);
+    transition:transform .2s;
+  }
+  details.step[open] > summary::after{transform:rotate(45deg); color:var(--accent);}
+  .step-body{padding:0 1.2rem 1.2rem 1.2rem; font-size:.94rem;}
+  .step-body p:first-child{margin-top:0;}
+
+  /* takeaway cards */
+  .card-grid{display:grid; grid-template-columns:1fr 1fr; gap:1.1rem; margin-top:1.6rem;}
+  @media (max-width:700px){ .card-grid{grid-template-columns:1fr;} }
+  .prompt-card{
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    padding:1.4rem; display:flex; flex-direction:column; gap:.9rem;
+  }
+  .prompt-card h3{font-size:1.05rem;}
+  .prompt-card .desc{color:var(--text-dim); font-size:.88rem; flex-grow:1;}
+  .prompt-card .btn-row{display:flex; gap:.6rem; flex-wrap:wrap;}
+  .btn{
+    font-family:var(--mono); font-size:.78rem; padding:.55rem .95rem; border-radius:8px; cursor:pointer;
+    border:1px solid var(--accent-strong); background:var(--accent); color:#06110F; font-weight:600;
+    transition:all .15s; display:inline-flex; align-items:center; gap:.4rem;
+  }
+  .btn:hover{background:var(--accent-strong); border-color:var(--accent-strong);}
+  .btn.ghost{background:transparent; color:var(--accent); border-color:var(--border);}
+  .btn.ghost:hover{border-color:var(--accent);}
+  .btn.copied{background:var(--text-hi); border-color:var(--text-hi);}
+
+  /* misc */
+  .divider-note{color:var(--text-faint); font-size:.85rem; margin-top:.6rem;}
+  .link-list{display:flex; flex-wrap:wrap; gap:.6rem 1.6rem; margin:1.2rem 0 0; padding:0; list-style:none;}
+  .link-list li{margin:0;}
+  .link-list a{font-family:var(--mono); font-size:.85rem;}
+
+  footer{border-top:1px solid var(--border-soft); padding:2.6rem 0 3.5rem;}
+  footer .wrap{display:flex; flex-direction:column; gap:.6rem;}
+  footer p{color:var(--text-faint); font-size:.85rem; margin:0;}
+  footer a{color:var(--text-dim);}
+
+  .fig-caption{font-size:.82rem; color:var(--text-faint); margin-top:.5rem;}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">XLProot<span>/</span>guide</div>
+    <nav class="topnav" id="topnav">
+      <a href="#prereqs">Prerequisites</a>
+      <a href="#security">Security bypass</a>
+      <a href="#stack-choice">Choose stack</a>
+      <a href="#install">Install</a>
+      <a href="#issues">Known issues</a>
+      <a href="#broken">Get unstuck</a>
+      <a href="#takeaway">Take it with you</a>
+    </nav>
+  </div>
+</header>
+
+<nav class="stack-rail" aria-label="Guide progress">
+  <div class="rail-line"></div>
+  <ol id="railList">
+    <li data-target="start"><button><span class="node"></span><span class="lbl">L0 · Android host</span></button></li>
+    <li data-target="prereqs"><button><span class="node"></span><span class="lbl">L1 · Prerequisites</span></button></li>
+    <li data-target="security"><button><span class="node"></span><span class="lbl">L2 · Security bypass</span></button></li>
+    <li data-target="stack-choice"><button><span class="node"></span><span class="lbl">L3 · Choose stack</span></button></li>
+    <li data-target="install"><button><span class="node"></span><span class="lbl">L4 · Install</span></button></li>
+    <li data-target="issues"><button><span class="node"></span><span class="lbl">L5 · Known issues</span></button></li>
+    <li data-target="broken"><button><span class="node"></span><span class="lbl">L6 · Get unstuck</span></button></li>
+    <li data-target="takeaway"><button><span class="node"></span><span class="lbl">L7 · Take it with you</span></button></li>
+  </ol>
+</nav>
+
+<main>
+
+  <!-- ============ HERO ============ -->
+  <section id="start" class="hero" style="border-top:none; padding-top:3.5rem;">
+    <div class="wrap">
+      <span class="eyebrow"><span class="dash"></span> A field guide, not a script</span>
+      <h1>A full Linux desktop, <em>running inside your Android phone.</em></h1>
+      <p class="lede">
+        <strong>XoDos-Ark</strong> runs a real Linux distro — desktop environment included — inside a
+        PRoot container on Android. No laptop required for coursework, dev tools, or a proper terminal.
+        This guide covers the prerequisites, the install, a real conflict with banking apps that nobody
+        warns you about, and the fixes that actually work.
+      </p>
+
+      <div class="terminal">
+        <div class="terminal-head">
+          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          <span>xodos-ark — bash</span>
+        </div>
+        <div class="terminal-body" id="bootTerminal" aria-live="polite"></div>
+      </div>
+
+      <div class="example-key">
+        <span>💡</span>
+        <span>Anything styled like <span class="swap">this</span> throughout the guide is a placeholder —
+        a device, a username, a version number. Swap it for your own before running anything.</span>
+      </div>
+
+      <div class="callout">
+        <span class="head">Credits & attribution</span>
+        <p>This is an independent, community-written field guide — not official XoDos-Ark documentation.
+        Full credit for the underlying tool goes to <strong>XoDos-Ark's developer</strong>
+        (<a href="https://github.com/xodiosx/XoDos-Ark" target="_blank" rel="noopener">github.com/xodiosx/XoDos-Ark</a>),
+        which itself builds on <strong>Termux</strong> and <strong>Termux-X11</strong>.</p>
+        <p>Drafted with <strong>Claude AI</strong> from my own testing notes; I'm the one who ran every step on
+        real hardware, caught the bugs, and iterate on fixes as new issues turn up.
+        Maintained by <strong>KianoRoku18Ino</strong>.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ WHAT THIS IS ============ -->
+  <section style="padding-bottom:0;">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="section-num">THE ARCHITECTURE</span>
+        <h2>What you're actually building</h2>
+        <p class="sub">Every layer sits on top of the one below it. If something breaks, knowing which layer it broke in is most of the diagnosis.</p>
+      </div>
+
+      <div class="arch-diagram">
+        <div class="arch-layer host">
+          <span class="tag">L0</span>
+          <div><div class="name">Android (your phone's actual OS)</div><div class="desc">Hardware, kernel, Android's own process management</div></div>
+        </div>
+        <div class="arch-layer">
+          <span class="tag">L1</span>
+          <div><div class="name">XoDos-Ark + PRoot</div><div class="desc">Runs a Linux filesystem in userspace — not a VM, not root access</div></div>
+        </div>
+        <div class="arch-layer">
+          <span class="tag">L2</span>
+          <div><div class="name">Distro (e.g. Debian)</div><div class="desc">The actual Linux userland — package manager, libraries, shell</div></div>
+        </div>
+        <div class="arch-layer">
+          <span class="tag">L3</span>
+          <div><div class="name">Desktop environment (e.g. XFCE4)</div><div class="desc">Window manager, panel, file manager</div></div>
+        </div>
+        <div class="arch-layer">
+          <span class="tag">L4</span>
+          <div><div class="name">Display server (e.g. X11 via Termux-X11)</div><div class="desc">Actually draws the desktop to your screen</div></div>
+        </div>
+        <div class="arch-layer">
+          <span class="tag">L5</span>
+          <div><div class="name">Your apps</div><div class="desc">VS Code, browsers, whatever coursework needs</div></div>
+        </div>
+      </div>
+      <p class="fig-caption">This stack is why "it's not working" is never a full bug report — the fix at L4 (display) looks nothing like the fix at L2 (package manager). Say which layer you're on when you ask for help.</p>
+    </div>
+  </section>
+
+  <!-- ============ PREREQUISITES ============ -->
+  <section id="prereqs">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="section-num">L1 — BEFORE YOU INSTALL ANYTHING</span>
+        <h2>Prerequisites</h2>
+        <p class="sub">Most failed installs trace back to skipping one of the two settings below — not a bad download, not a bad guide.</p>
+      </div>
+
+      <h3 style="font-size:1.05rem; margin-bottom:.8rem;">Device check</h3>
+      <ul>
+        <li><strong style="color:var(--text-hi)">64-bit (arm64) required.</strong> XoDos-Ark does not run on 32-bit-only devices. Nearly every phone from the last several years qualifies.</li>
+        <li><strong style="color:var(--text-hi)">~4GB free storage</strong> minimum before you start.</li>
+        <li>Stable Wi-Fi — the initial distro download is large.</li>
+      </ul>
+      <p class="divider-note">
+        Example: <span class="swap">Snapdragon 7 Gen 3, Adreno 720, 8GB RAM</span> — check yours under
+        <code>Settings → About Phone</code>, or install a free app like CPU-Z or Device Info HW if you're not sure. Don't guess.
+      </p>
+
+      <h3 style="font-size:1.05rem; margin:2rem 0 .8rem;">Two one-time Android settings</h3>
+      <p>These apply no matter what device or distro you choose — they're Android-level, not XoDos-Ark-specific.</p>
+
+      <div class="callout warn">
+        <span class="head">1 · Disable the Phantom Process Killer</span>
+        <div class="path">Settings <span class="arrow">→</span> About Phone <span class="arrow">→</span> tap Build Number 7×<br>Settings <span class="arrow">→</span> Developer Options <span class="arrow">→</span> "Disable child process restrictions"</div>
+        <p>Since Android 12, the OS kills an app's child processes once too many are running — even with free RAM available. Installing packages spawns a new process per operation, so <code>apt</code>/<code>dnf</code>/<code>pacman</code> installs can get silently killed halfway through without this toggle. This affects this whole category of app (Termux, Andronix, Debian NoRoot, etc.), not just XoDos-Ark.</p>
+        <p><strong>It resets automatically</strong> if Developer Options ever gets toggled off — including by a banking app that forces it off (see the next section) — and back on. Re-enable it each time that happens, before your next install session.</p>
+      </div>
+
+      <div class="callout">
+        <span class="head">2 · Grant "All Files Access"</span>
+        <div class="path">Settings <span class="arrow">→</span> Apps <span class="arrow">→</span> XoDos-Ark <span class="arrow">→</span> Permissions <span class="arrow">→</span> Files and media <span class="arrow">→</span> Allow management of all files</div>
+        <p>Without this, tools inside the container can't see Android's storage folders at all. It looks like "no phone storage support" — it's actually just a missing permission.</p>
+      </div>
+
+      <h3 style="font-size:1.05rem; margin:2rem 0 .8rem;">Get the current build</h3>
+      <p>
+        Don't trust a version number pinned in any guide — including this one. XoDos-Ark ships new releases
+        frequently. Always check the releases page directly:
+      </p>
+      <ul class="link-list">
+        <li><a href="https://github.com/xodiosx/XoDos-Ark/releases" target="_blank" rel="noopener">github.com/xodiosx/XoDos-Ark/releases ↗</a></li>
+        <li><a href="https://t.me/xodemulatorr" target="_blank" rel="noopener">Telegram: t.me/xodemulatorr ↗</a></li>
+        <li><a href="https://discord.gg/d2ChVhPfnF" target="_blank" rel="noopener">Discord: discord.gg/d2ChVhPfnF ↗</a></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ SECURITY BYPASS ============ -->
+  <section id="security">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="section-num">L2 — THE PART NOBODY WARNS YOU ABOUT</span>
+        <h2>Developer Options vs. your banking app</h2>
+        <p class="sub">Turning on Developer Options is required for XoDos-Ark. It's also one of the exact signals your banking, government, or e-wallet apps check for before they'll let you in.</p>
+      </div>
+
+      <div class="callout danger">
+        <span class="head">The conflict</span>
+        <p>
+          Many banking, government, and e-wallet apps refuse to open — or quietly disable sensitive features —
+          the moment they detect Developer Options, USB Debugging, or an active Accessibility Service. This
+          isn't a XoDos-Ark bug. It's a deliberate anti-tampering check built into those apps, and it has
+          nothing to do with whether you're actually doing anything malicious.
+        </p>
+        <p>That leaves you with a real, recurring problem: you need Developer Options <em>on</em> for your dev environment, and <em>off</em> for your banking app — and manually flipping it back and forth in Settings every single time gets old fast.</p>
+      </div>
+
+      <p>Three apps solve this together, and it's worth understanding what each one actually does before you install them:</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>App</th><th>Role</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Shizuku</strong> <em>or</em> <strong>Brevent</strong></td><td>Gives a helper app elevated access to system settings, through a one-time ADB-based authorization — without rooting your phone.</td></tr>
+            <tr><td><strong>Geto</strong></td><td>The app you actually use day to day. Once it has permission (granted through Shizuku or Brevent), Geto can flip Developer Options / USB Debugging / Accessibility off automatically right before you open a chosen app, and prompts you to revert them after.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout">
+        <span class="head">Read this before you install anything</span>
+        <p>Geto does <strong>not</strong> hide Developer Options from one app while leaving it on for everything else. It scripts the real, system-wide toggle — flips the actual setting off right before launching your target app, and back on via a revert notification once you're done. It's convenience and automation, not true per-app spoofing.</p>
+        <p>It's also not guaranteed to work on every bank's app. Some banking apps have already been reported to detect this exact method. Treat it as "often works," not "guaranteed."</p>
+      </div>
+
+      <h3 style="font-size:1.05rem; margin:2rem 0 .8rem;">Setting it up</h3>
+
+      <details class="step" open>
+        <summary><span class="step-num">1</span> Install Shizuku or Brevent</summary>
+        <div class="step-body">
+          <p>Pick one — you only need one of the two:</p>
+          <ul>
+            <li><strong style="color:var(--text-hi)">Shizuku</strong> — needs a companion shell app (e.g. aShell) to actually run commands through it. Official download: <a href="https://shizuku.rikka.app/download/" target="_blank" rel="noopener">shizuku.rikka.app/download ↗</a></li>
+            <li><strong style="color:var(--text-hi)">Brevent</strong> — authorizes itself via a one-time ADB shell command. Official repo: <a href="https://github.com/brevent/Brevent" target="_blank" rel="noopener">github.com/brevent/Brevent ↗</a></li>
+          </ul>
+          <p>Either one needs Developer Options turned on <strong>at least once</strong> for its own initial setup — Shizuku's wireless-debugging pairing, or Brevent's ADB authorization. That part is unavoidable; Geto's convenience only kicks in after this one-time step is done.</p>
+        </div>
+      </details>
+
+      <details class="step">
+        <summary><span class="step-num">2</span> Install Geto from an official source</summary>
+        <div class="step-body">
+          <p>Geto requests a genuinely powerful permission — install it only from an official source, never a third-party APK mirror:</p>
+          <ul class="link-list" style="margin-top:0;">
+            <li><a href="https://f-droid.org/en/packages/com.android.geto/" target="_blank" rel="noopener">F-Droid (recommended) ↗</a></li>
+            <li><a href="https://github.com/JackEblan/Geto/releases" target="_blank" rel="noopener">GitHub Releases ↗</a></li>
+          </ul>
+          <p class="divider-note">Project home: <a href="https://github.com/JackEblan/Geto" target="_blank" rel="noopener">github.com/JackEblan/Geto ↗</a> — check the releases page for whatever's newest rather than assuming a version pinned anywhere (including here) is current.</p>
+        </div>
+      </details>
+
+      <details class="step">
+        <summary><span class="step-num">3</span> Grant Geto the permission it needs</summary>
+        <div class="step-body">
+          <p>Open Geto and try to add a rule. It'll prompt you with a command like this — run it through whichever tool you set up in step 1:</p>
+          <div class="code-block">
+            <div class="code-block-head"><span>shell</span><button class="copy-btn" data-copy="pm grant com.android.geto android.permission.WRITE_SECURE_SETTINGS">Copy</button></div>
+            <pre><code>pm grant com.android.geto android.permission.WRITE_SECURE_SETTINGS</code></pre>
+          </div>
+          <ul>
+            <li><strong style="color:var(--text-hi)">Via Brevent:</strong> open its "Exec command" screen, paste the command, send it.</li>
+            <li><strong style="color:var(--text-hi)">Via Shizuku:</strong> run it through a Shizuku-connected shell app (e.g. aShell).</li>
+          </ul>
+          <p>A successful run shows <code>exitcode=0</code>. No visible output from <code>pm grant</code> itself is normal — silence means it worked.</p>
+
+          <p style="margin-top:1rem;"><strong style="color:var(--text-hi)">Running Dual Space, a Work Profile, or a cloned app?</strong> Each Android user profile has independent permissions. If the app you're hiding settings from is cloned into a second profile, grant it there too:</p>
+          <div class="code-block">
+            <div class="code-block-head"><span>shell — replace &lt;profile_id&gt;</span><button class="copy-btn" data-copy="pm grant --user <profile_id> com.android.geto android.permission.WRITE_SECURE_SETTINGS">Copy</button></div>
+            <pre><code>pm grant --user <span class="swap">&lt;profile_id&gt;</span> com.android.geto android.permission.WRITE_SECURE_SETTINGS</code></pre>
+          </div>
+          <p>Confirm both profiles are granted with:</p>
+          <div class="code-block">
+            <div class="code-block-head"><span>shell</span><button class="copy-btn" data-copy="dumpsys package com.android.geto | grep WRITE_SECURE_SETTINGS">Copy</button></div>
+            <pre><code>dumpsys package com.android.geto | grep WRITE_SECURE_SETTINGS</code></pre>
+          </div>
+          <p class="divider-note">You should see one <code>granted=true</code> line per profile that actually needs it. A <code>granted=false</code> line for a profile you don't use for banking is harmless — ignore it.</p>
+        </div>
+      </details>
+
+      <details class="step">
+        <summary><span class="step-num">4</span> Set up a rule for your banking app</summary>
+        <div class="step-body">
+          <p>Inside Geto, add your target app (e.g. your bank or e-wallet) and enable the toggles you want auto-hidden:</p>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>Setting key</th><th>Label in Geto</th><th>Reliability</th></tr></thead>
+              <tbody>
+                <tr><td><code>development_settings_enabled</code></td><td>Hide Developer Options</td><td>Works reliably</td></tr>
+                <tr><td><code>adb_enabled</code></td><td>Hide USB Debugging</td><td>Works reliably</td></tr>
+                <tr><td><code>adb_wifi_enabled</code></td><td>Hide Wireless Debugging</td><td>Works reliably</td></tr>
+                <tr><td><code>accessibility_enabled</code></td><td>Hide Accessibility Services</td><td>Inconsistent — some banks still detect it</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>Each enabled toggle flips off automatically when you launch the target app through Geto's shortcut, and Geto shows a revert notification to restore everything once you're done. <strong style="color:var(--text-hi)">Tap that notification before going back to XoDos-Ark</strong> — otherwise Developer Options stays off and your next install session will silently fail (see the Phantom Process Killer note above).</p>
+          <p>If a banking app still complains despite the Accessibility toggle being on, the more reliable fallback is manually turning off any Accessibility Service you actually have running, rather than relying on Geto to hide its "enabled" flag.</p>
+        </div>
+      </details>
+
+      <details class="step">
+        <summary><span class="step-num">5</span> Undoing it, if you ever need to</summary>
+        <div class="step-body">
+          <p>Everything here is fully reversible — no bootloader, root, or system-partition changes anywhere in this process.</p>
+          <ul>
+            <li><strong style="color:var(--text-hi)">Revert an active hide:</strong> tap the revert notification, or re-enable the settings manually.</li>
+            <li><strong style="color:var(--text-hi)">Revoke Geto's permission without uninstalling:</strong>
+              <div class="code-block" style="margin-top:.6rem;">
+                <div class="code-block-head"><span>shell</span><button class="copy-btn" data-copy="pm revoke com.android.geto android.permission.WRITE_SECURE_SETTINGS">Copy</button></div>
+                <pre><code>pm revoke com.android.geto android.permission.WRITE_SECURE_SETTINGS</code></pre>
+              </div>
+            </li>
+            <li><strong style="color:var(--text-hi)">Remove Geto entirely:</strong> uninstall it normally — this removes the granted permission along with it, no manual cleanup needed.</li>
+          </ul>
+          <p class="divider-note">A device restart does not undo the permission grant — permissions persist across reboots by design. A restart only resets whatever Geto had actively toggled mid-session back to its last real state.</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <!-- ============ CHOOSE STACK ============ -->
+  <section id="stack-choice">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="section-num">L3 — PICKING YOUR COMBINATION</span>
+        <h2>Choose your stack</h2>
+        <p class="sub">XoDos-Ark lets you mix a distro, a desktop environment, and a display server. Not all combinations are equally proven.</p>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Layer</th><th>Recommended</th><th>Why</th></tr></thead>
+          <tbody>
+            <tr><td>Distro</td><td><strong>Debian</strong></td><td>Largest package availability, most predictable <code>apt</code>-based installer scripts, best-documented behavior in PRoot/Android contexts.</td></tr>
+            <tr><td>Desktop environment</td><td><strong>XFCE4</strong></td><td>Lightest resource footprint of the commonly-available DEs, most consistently reported stable in PRoot setups.</td></tr>
+            <tr><td>Display server</td><td><strong>X11</strong></td><td>Wayland typically needs direct DRM/KMS kernel access PRoot containers usually can't get — X11 via Termux-X11 is the traditional working path.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        Everything else — other distros (Arch, Fedora, Ubuntu, Alpine…), other DEs (KDE, GNOME, LXQt, MATE, Cinnamon),
+        or Wayland — should be treated as an <strong style="color:var(--text-hi)">optional fallback or experiment</strong>,
+        not an equal alternative, unless you've already independently confirmed a specific combination works well on
+        your own device. Heavier DEs like KDE Plasma or GNOME are realistically only viable on stronger devices — weigh
+        your RAM and CPU tier before reaching for them.
+      </p>
+
+      <div class="callout">
+        <span class="head">Don't hardcode the options list</span>
+        <p>What's selectable inside XoDos-Ark's "Select Environment" and "Desktop Launchers" screens changes as the app updates. Open those screens yourself and use whatever's actually listed as current-truth for your session — not a screenshot from an old guide.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ INSTALL ============ -->
+  <section id="install">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="section-num">L4 — FRESH INSTALL WALKTHROUGH</span>
+        <h2>Installing Debian + XFCE4 + X11</h2>
+        <p class="sub">Each step below is a checkpoint — verify before moving to the next one. A broken step three parts in is much easier to fix than a broken desktop with no idea which part failed.</p>
+      </div>
+
+      <details class="step" open>
+        <summary><span class="step-num">1</span> Confirm the fresh install is healthy</summary>
+        <div class="step-body">
+          <p>Open a terminal in your new Debian environment and run this whole block in one go — it runs six checks in sequence with labeled output:</p>
+          <div class="code-block">
+            <div class="code-block-head"><span>bash</span><button class="copy-btn" data-copy='echo "### 1. Debian version/codename ###"; cat /etc/os-release; echo
+echo "### 2. Architecture (should be arm64) ###"; dpkg --print-architecture; echo
+echo "### 3. Package DB integrity ###"; apt-get check; echo
+echo "### 4. Repo reachability ###"; apt update; echo
+echo "### 5. Filesystem writable ###"; touch /root/.writetest && echo OK && rm /root/.writetest; echo
+echo "### 6. Broken/leftover package state ###"; dpkg -l | grep -E &apos;^.[^i]&apos; | grep -v &apos;^ii&apos;; echo
+echo "### Checks complete ###"'>Copy</button></div>
+            <pre><code>echo "### 1. Debian version/codename ###"; cat /etc/os-release; echo
+echo "### 2. Architecture (should be arm64) ###"; dpkg --print-architecture; echo
+echo "### 3. Package DB integrity ###"; apt-get check; echo
+echo "### 4. Repo reachability ###"; apt update; echo
+echo "### 5. Filesystem writable ###"; touch /root/.writetest && echo OK && rm /root/.writetest; echo
+echo "### 6. Broken/leftover package state ###"; dpkg -l | grep -E '^.[^i]' | grep -v '^ii'; echo
+echo "### Checks complete ###"</code></pre>
+          </div>
+          <p>What "clean" looks like: (1) a real Debian codename, not silently older/newer than intended; (2) <code>arm64</code>; (3) no output; (4) completes with no <code>Could not resolve</code>, <code>Connection failed</code>, or <code>Hash Sum mismatch</code> — the single most important check, since a broken <code>apt update</code> causes confusing failures later; (5) <code>OK</code>; (6) nothing but header lines.</p>
+        </div>
+      </details>
+
+      <details class="step">
+        <summary><span class="step-num">2</span> Confirm you're actually on X11, not Wayland</summary>
+        <div class="step-body">
+          <p>Do this before installing XFCE — a broken display target won't show up as an install error, it shows up later as "installed fine but nothing renders."</p>
+          <div class="code-block">
+            <div class="code-block-head"><span>bash</span><button class="copy-btn" data-copy="echo $DISPLAY
+echo $WAYLAND_DISPLAY
+echo $XDG_SESSION_TYPE">Copy</button></div>
+            <pre><code>echo $DISPLAY
+echo $WAYLAND_DISPLAY
+echo $XDG_SESSION_TYPE</code></pre>
+          </div>
+          <p><code>$DISPLAY</code> should show something like <code>:0</code>. <code>$WAYLAND_DISPLAY</code> should be empty. <code>$XDG_SESSION_TYPE</code> may say <code>wayland</code> even when X11 is genuinely running — this variable is commonly stale in PRoot containers. Don't trust it alone; use the authoritative test instead:</p>
+          <div class="code-block">
+            <div class="code-block-head"><span>bash</span><button class="copy-btn" data-copy="apt install -y x11-utils
+xdpyinfo | head -5">Copy</button></div>
+            <pre><code>apt install -y x11-utils
+xdpyinfo | head -5</code></pre>
+          </div>
+          <p>Real output (a vendor string like "The X.Org Foundation", screen info) means a genuine X11 server is responding. <code>Error: unable to open display</code> means nothing's listening — fix that before installing XFCE on top of it.</p>
+        </div>
+      </details>
+
+      <details class="step">
+        <summary><span class="step-num">3</span> Optional: create a non-root user with sudo</summary>
+        <div class="step-body">
+          <p>XoDos-Ark's Debian container boots you in as root by default, and you can stay root the whole way through if you'd rather not deal with this. If you want a normal home directory and <code>sudo</code> instead:</p>
+          <div class="code-block">
+            <div class="code-block-head"><span>bash — install sudo first, it's often missing on a minimal image</span><button class="copy-btn" data-copy="apt install -y sudo adduser">Copy</button></div>
+            <pre><code>apt install -y sudo adduser</code></pre>
+          </div>
+          <div class="code-block">
+            <div class="code-block-head"><span>bash — replace &lt;username&gt; with your own</span><button class="copy-btn" data-copy="adduser <username>
+usermod -aG sudo,audio,video,input,render <username>">Copy</button></div>
+            <pre><code>adduser <span class="swap">&lt;username&gt;</span>
+usermod -aG sudo,audio,video,input,render <span class="swap">&lt;username&gt;</span></code></pre>
+          </div>
+          <p>Test it actually works before relying on it:</p>
+          <div class="code-block">
+            <div class="code-block-head"><span>bash</span><button class="copy-btn" data-copy="su - <username>
+sudo whoami">Copy</button></div>
+            <pre><code>su - <span class="swap">&lt;username&gt;</span>
+sudo whoami</code></pre>
+          </div>
+          <p>Should print <code>root</code>. If it hangs or fails instead: some PRoot filesystems mount <code>nosuid</code>, which blocks <code>sudo</code>/<code>su</code> elevation entirely — a known architectural limitation on some devices, not a mistake in the steps above. Test it directly rather than assuming either way. If it genuinely doesn't work, the fallback is simply staying root for install/config commands, while keeping the user account for its own home directory.</p>
+        </div>
+      </details>
+
+      <details class="step">
+        <summary><span class="step-num">4</span> Install XFCE4</summary>
+        <div class="step-body">
+          <p>Use the XFCE install script from XoDos-Ark's "Desktop Launchers" screen for Debian. It should look close to this:</p>
+          <div class="code-block">
+            <div class="code-block-head"><span>bash</span><button class="copy-btn" data-copy="apt-get update -y && apt-get upgrade -y
+apt-get install -y --option Dpkg::Options::=&quot;--force-overwrite&quot; xfce4 xfce4-goodies xfce4-whiskermenu-plugin mesa-utils xwayland libvulkan-dev mesa-vulkan-drivers libgl1-mesa-dri libglx-mesa0 libegl-mesa0 vulkan-tools dbus-x11 pulseaudio pavucontrol
+export PULSE_SERVER=127.0.0.1">Copy</button></div>
+            <pre><code>apt-get update -y && apt-get upgrade -y
+apt-get install -y --option Dpkg::Options::="--force-overwrite" xfce4 xfce4-goodies xfce4-whiskermenu-plugin mesa-utils xwayland libvulkan-dev mesa-vulkan-drivers libgl1-mesa-dri libglx-mesa0 libegl-mesa0 vulkan-tools dbus-x11 pulseaudio pavucontrol
+export PULSE_SERVER=127.0.0.1</code></pre>
+          </div>
+          <ul>
+            <li><code>--force-overwrite</code> is intentional — it resolves file-conflict clashes between the mesa GL/Vulkan packages. Not a red flag.</li>
+            <li><code>xwayland</code> installs but won't be used on the X11 path — harmless, just extra disk space.</li>
+            <li><code>export PULSE_SERVER</code> only applies inside this shell session. Add the same line to <code>~/.bashrc</code> if you want working audio in future sessions.</li>
+          </ul>
+        </div>
+      </details>
+
+      <details class="step">
+        <summary><span class="step-num">5</span> Verify the XFCE install</summary>
+        <div class="step-body">
+          <div class="code-block">
+            <div class="code-block-head"><span>bash</span><button class="copy-btn" data-copy='echo "### 1. No broken packages after forced install ###"; apt-get check; dpkg --audit; echo
+echo "### 2. Core XFCE binaries present ###"; which startxfce4 xfce4-session xfwm4 xfce4-panel xfdesktop; echo
+echo "### 3. No half-configured package state ###"; dpkg -l | grep -E &apos;^.[^i]&apos; | grep -v &apos;^ii&apos;; echo
+echo "### 4. D-Bus session launcher ###"; dbus-launch --sh-syntax; echo
+echo "### 5. Renderer check (GL + Vulkan) ###"; glxinfo -B | grep -i renderer; vulkaninfo --summary | grep -i deviceName; echo
+echo "### Checks complete ###"'>Copy</button></div>
+            <pre><code>echo "### 1. No broken packages after forced install ###"; apt-get check; dpkg --audit; echo
+echo "### 2. Core XFCE binaries present ###"; which startxfce4 xfce4-session xfwm4 xfce4-panel xfdesktop; echo
+echo "### 3. No half-configured package state ###"; dpkg -l | grep -E '^.[^i]' | grep -v '^ii'; echo
+echo "### 4. D-Bus session launcher ###"; dbus-launch --sh-syntax; echo
+echo "### 5. Renderer check (GL + Vulkan) ###"; glxinfo -B | grep -i renderer; vulkaninfo --summary | grep -i deviceName; echo
+echo "### Checks complete ###"</code></pre>
+          </div>
+          <p>Clean output looks like: (1) both silent; (2) all five binaries resolve to a path; (3) nothing but header lines; (4) real <code>DBUS_SESSION_BUS_ADDRESS=</code> and <code>DBUS_SESSION_BUS_PID=</code> lines; (5) a software renderer — typically <code>llvmpipe</code> — reported on both GL and Vulkan. Hardware acceleration is not expected here; that's normal for PRoot containers on most devices, not a misconfiguration.</p>
+        </div>
+      </details>
+
+      <details class="step">
+        <summary><span class="step-num">6</span> Pick the right launcher</summary>
+        <div class="step-body">
+          <p>XoDos-Ark usually lists two similar-looking XFCE launchers. Use <strong style="color:var(--text-hi)">"XFCE"</strong> (the one ending in <code>exec dbus-run-session startxfce4</code>), not "XFCE Desktop" (<code>xfce4-session</code> invoked directly). <code>startxfce4</code> is the official entry point — it handles environment setup that the direct call skips.</p>
+        </div>
+      </details>
+
+      <details class="step">
+        <summary><span class="step-num">7</span> First launch</summary>
+        <div class="step-body">
+          <p>Leave compositing at its default (on) the first time — don't change display settings before confirming things work normally. Drag a window or panel icon across the screen and watch for ghosting or trailing artifacts; it's a fast way to catch a compositor issue early, before installing more software on top. If everything renders cleanly and you just want a working Linux desktop, you can stop here.</p>
+        </div>
+      </details>
+
+      <details class="step">
+        <summary><span class="step-num">8</span> Set up a coding environment</summary>
+        <div class="step-body">
+          <p>Git first, since everything else depends on it:</p>
+          <div class="code-block">
+            <div class="code-block-head"><span>bash</span><button class="copy-btn" data-copy="apt install -y git curl wget">Copy</button></div>
+            <pre><code>apt install -y git curl wget</code></pre>
+          </div>
+          <p>VS Code, arm64 build:</p>
+          <div class="code-block">
+            <div class="code-block-head"><span>bash</span><button class="copy-btn" data-copy='wget -O vscode-arm64.deb "https://update.code.visualstudio.com/latest/linux-deb-arm64/stable"
+apt install -y ./vscode-arm64.deb'>Copy</button></div>
+            <pre><code>wget -O vscode-arm64.deb "https://update.code.visualstudio.com/latest/linux-deb-arm64/stable"
+apt install -y ./vscode-arm64.deb</code></pre>
+          </div>
+          <p>Launch it with <code>--no-sandbox</code> — required, not optional:</p>
+          <div class="code-block">
+            <div class="code-block-head"><span>bash</span><button class="copy-btn" data-copy="code --no-sandbox">Copy</button></div>
+            <pre><code>code --no-sandbox</code></pre>
+          </div>
+          <p>PRoot filesystems commonly mount <code>nosuid</code>, which blocks the SUID-based sandbox Electron apps (VS Code, Chromium-based browsers) normally use. Without the flag, VS Code either fails to launch or crashes on startup — an architecture-level fact of PRoot containers generally, worth confirming rather than assuming. Make it permanent so you don't retype it every time:</p>
+          <div class="code-block">
+            <div class="code-block-head"><span>bash</span><button class="copy-btn" data-copy="echo &quot;alias code='code --no-sandbox'&quot; >> ~/.bashrc">Copy</button></div>
+            <pre><code>echo "alias code='code --no-sandbox'" >> ~/.bashrc</code></pre>
+          </div>
+          <p>If you install a Progressive Web App through Chromium (the "Install App" browser menu option), the same <code>nosuid</code> issue applies — find its <code>.desktop</code> file and add <code>--no-sandbox</code> to the <code>Exec=</code> line the same way:</p>
+          <div class="code-block">
+            <div class="code-block-head"><span>bash</span><button class="copy-btn" data-copy="grep -rn 'Exec=' ~/.local/share/applications/*.desktop">Copy</button></div>
+            <pre><code>grep -rn "Exec=" ~/.local/share/applications/*.desktop</code></pre>
+          </div>
+          <p>Optional — GitHub CLI, if you'll be pushing to repos from here (choose HTTPS + a Personal Access Token when prompted, it avoids setting up SSH keys separately):</p>
+          <div class="code-block">
+            <div class="code-block-head"><span>bash</span><button class="copy-btn" data-copy="apt install -y gh
+gh auth login">Copy</button></div>
+            <pre><code>apt install -y gh
+gh auth login</code></pre>
+          </div>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <!-- ============ ISSUES ============ -->
+  <section id="issues">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="section-num">L5 — STRUCTURAL, NOT DEVICE-SPECIFIC</span>
+        <h2>Issues to watch for</h2>
+        <p class="sub">These are facts about PRoot-on-Android as a category — true for any device or distro running under it, not one person's bug report. Watch for them proactively instead of being surprised.</p>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Category</th><th>What to watch for</th><th>Limit</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>GPU / hardware accel</strong></td>
+              <td>PRoot containers have historically been blocked from directly accessing <code>/dev/dri</code>. Software rendering (<code>llvmpipe</code> for GL, <code>lavapipe</code> for Vulkan) is the reliable fallback. Newer driver-wrapper systems may improve this on some devices — verify, don't assume.</td>
+              <td>Soft</td>
+            </tr>
+            <tr>
+              <td><strong>Wayland</strong></td>
+              <td>Typically needs direct DRM/KMS kernel access PRoot containers usually can't get. X11 is the traditional working path.</td>
+              <td>Soft</td>
+            </tr>
+            <tr>
+              <td><strong>D-Bus / systemd</strong></td>
+              <td>PRoot environments typically lack a running system D-Bus and systemd. Desktop environments often need a manual <code>dbus-launch</code> step and explicit session variables before the GUI renders properly.</td>
+              <td>Soft — expected workaround</td>
+            </tr>
+            <tr>
+              <td><strong>sudo / su elevation</strong></td>
+              <td>Some PRoot filesystems mount <code>nosuid</code>, blocking <code>sudo</code>/<code>su</code> and SUID-sandboxed apps (Chromium, Electron). Workaround: <code>--no-sandbox</code> flags, or operate as root directly.</td>
+              <td>Soft</td>
+            </tr>
+            <tr>
+              <td><strong>musl vs. glibc</strong></td>
+              <td>Distros using musl libc (Alpine, Chimera, Adelie) may fail to run glibc-compiled binaries like Chromium or VS Code, even with sandbox flags fixed.</td>
+              <td><strong style="color:var(--danger)">Hard</strong> — generally not fixable without musl-compiled alternatives</td>
+            </tr>
+            <tr>
+              <td><strong>systemd-less distros</strong></td>
+              <td>Don't assume "no systemd" (Artix, Void, etc.) is automatically better for a stripped-down container — it may just mean less precedent for working around PRoot's already-limited init/D-Bus environment.</td>
+              <td>Untested — verify, don't infer</td>
+            </tr>
+            <tr>
+              <td><strong>Installer scripts</strong></td>
+              <td>DE installer scripts inside XoDos-Ark are generated per-distro. Package names and bundled fixes vary between distro families — review the actual script before running it.</td>
+              <td>Practice, not a bug</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout warn">
+        <span class="head">Confidence levels aren't all equal</span>
+        <p>When you're getting advice — from a guide, a classmate, or an AI — separate three tiers: a <strong style="color:var(--text-hi)">confirmed, tested pairing</strong> in a PRoot/Android context; something <strong style="color:var(--text-hi)">likely to work</strong> based on general Linux knowledge but untested here; and a <strong style="color:var(--text-hi)">named risk</strong> like the musl/glibc mismatch above — a real, foreseeable problem, not a guess. Advice that presents all three with the same confidence is worth double-checking.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ GET UNSTUCK ============ -->
+  <section id="broken">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="section-num">L6 — WHEN SOMETHING BREAKS</span>
+        <h2>Getting unstuck</h2>
+        <p class="sub">PRoot-on-Android has enough quirks that you will eventually hit something not covered above. AI assistants are genuinely capable at this kind of troubleshooting — but only with enough context.</p>
+      </div>
+
+      <ul>
+        <li><strong style="color:var(--text-hi)">Paste the exact error output, not a summary.</strong> "It's not working" gives almost nothing to work with. The literal error text — copy-pasted, not retyped from memory — usually contains the specific clue.</li>
+        <li><strong style="color:var(--text-hi)">State your full stack up front:</strong> device, distro, DE, display server, XoDos-Ark version — especially in a fresh conversation with no memory of prior context.</li>
+        <li><strong style="color:var(--text-hi)">Say this is a PRoot container on Android</strong>, not a normal Linux install. A fix that works on bare-metal Linux can be flatly impossible under PRoot.</li>
+        <li><strong style="color:var(--text-hi)">Try one suggested fix at a time.</strong> If given three possible causes, test them one at a time — otherwise, if something works, there's no way to know which change actually fixed it.</li>
+        <li><strong style="color:var(--text-hi)">If a fix doesn't work, say so and paste the new output</strong>, rather than restarting the conversation from scratch. The follow-up error is usually more specific and gets to a real fix faster.</li>
+      </ul>
+
+      <p>Any capable AI can help here — Claude, ChatGPT, DeepSeek, Gemini, or others. If an answer sounds too confident about something clearly untested, it's reasonable to cross-check with a second AI or just ask it directly how confident it actually is, and why.</p>
+    </div>
+  </section>
+
+  <!-- ============ TAKEAWAY ============ -->
+  <section id="takeaway">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="section-num">L7 — TAKE IT WITH YOU</span>
+        <h2>Give your own AI this exact context</h2>
+        <p class="sub">This entire guide has a companion prompt built for pasting straight into an AI chat, so it gives you personalized, context-aware help for your own device — instead of generic advice you have to re-explain every time.</p>
+      </div>
+
+      <div class="card-grid">
+        <div class="prompt-card">
+          <h3>AI Operating Prompt</h3>
+          <p class="desc">Works in any chat — Claude, ChatGPT, Gemini, DeepSeek, or otherwise. Paste it as your first message and answer only what it doesn't already know about your setup.</p>
+          <div class="btn-row">
+            <button class="btn" id="copyPrompt">Copy prompt</button>
+            <button class="btn ghost" id="downloadPrompt">Download .md</button>
+          </div>
+        </div>
+        <div class="prompt-card">
+          <h3>Claude Skill version</h3>
+          <p class="desc">If you use Claude with custom Skills, save this as <code>SKILL.md</code> inside a folder named <code>xodos-ark-environment</code> and add it as a skill — Claude will apply it automatically whenever this topic comes up.</p>
+          <div class="btn-row">
+            <button class="btn" id="copySkill">Copy skill</button>
+            <button class="btn ghost" id="downloadSkill">Download .md</button>
+          </div>
+        </div>
+      </div>
+
+      <p class="divider-note" style="margin-top:1.5rem;">Every time something gets fixed, confirmed working, or newly configured on your own device, ask your AI to update a personal reference Markdown file for you. Keep that file — it becomes your own device-specific guide over time, and it's more reliable than any AI's memory or this shared prompt, since it reflects your own tested results.</p>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>XoDos-Ark is built on top of, and credits, Termux and Termux-X11 as foundational components. Distributions are sourced primarily from the <code>termux/proot-distro</code> project's mirrors.</p>
+    <p>This guide is generalized on purpose — it avoids pinning to one device, one distro choice, or one version number so it stays useful as both the app and your own hardware change. Replace every example with your own.</p>
+  </div>
+</footer>
+
+<!-- Raw source text for copy/download — kept as plain text so no escaping is needed -->
+<script type="text/plain" id="prompt-source"># XoDos-Ark Linux Dev Environment — AI Operating Prompt
+### Universal version — for any BSIT student, any device, any capable AI
+
+> **What this is:** a prompt you paste into an AI chat (Claude, ChatGPT, DeepSeek, Gemini, or any capable model) to get guided help installing and running a Linux desktop environment on your own Android phone via XoDos-Ark, for QCU BSIT coursework or general dev use.
+>
+> **What this is not:** a fixed step-by-step script tied to one person's phone. Every student's device, storage, and XoDos-Ark version can differ — this prompt is built to adapt to *your* setup instead of assuming someone else's.
+
+---
+
+## 0. How to Use This Document
+
+1. Paste this entire document as your first message to an AI assistant.
+2. If the AI supports persistent memory across sessions (Claude, ChatGPT with memory on, etc.), let it check what it already knows about your setup before it asks you anything — see Part 1.
+3. Answer only what it doesn't already know. You should not be re-asked things you already told it in a previous conversation, unless memory was lost (new account, memory off, hit a conversation limit, switched AI models, etc.) — in that case, treat this as a fresh install and expect the full question set once.
+4. Work through the parts in order. Don't skip the two one-time Android settings in Part 3 — most install failures trace back to skipping those.
+5. Every time something gets fixed, confirmed working, or newly configured, the AI should offer to generate or update a personal Markdown reference file for you (see Part 7). Keep that file — it becomes your own device-specific guide over time, separate from this shared prompt.
+
+---
+
+## Part 1 — Instructions for the AI: Memory Check First
+
+**AI: before asking the student anything, do the following:**
+
+- If you have memory of this student from past conversations, silently recall what you already know about their device, distro, DE, XoDos-Ark version, and known issues. Don't re-ask for it.
+- Only ask about what's genuinely missing or has likely changed (e.g. XoDos-Ark version bumps often — confirm the version even if you remember an older one).
+- If you have no memory of this student at all (new conversation, memory disabled, different AI, or memory limit reached), say so plainly and proceed to Part 2 to collect the full baseline once. Don't make the student feel like they're repeating themselves if this genuinely is the first time you're seeing their setup.
+- If the student has previously generated a personal reference markdown (Part 7) and pastes or uploads it, treat that file as ground truth — it's more reliable than your own memory, since the student can hand it to a completely different AI with zero shared history and get equivalent help.
+- Never assume specifics about hardware, OS version, or XoDos-Ark version that weren't confirmed by memory, the student's own reference file, or the student's direct answer. Guessing and proceeding as if confirmed causes wasted install attempts.
+
+---
+
+## Part 2 — Baseline Info Needed (ask only what's missing)
+
+Collect these once per student, then remember them for future sessions if your platform supports it.
+
+### 2.1 Device Specs
+- Phone model
+- CPU / chipset (e.g. Snapdragon, Dimensity, Exynos — model number if known)
+- GPU (e.g. Adreno, Mali)
+- RAM (and whether any "Memory Fusion" / virtual RAM extension is on)
+- Storage available (need ~4GB minimum free)
+- Android version
+- Whether the device is 64-bit (arm64) — **required**, XoDos-Ark does not support 32-bit-only devices
+
+> If the student doesn't know some of these, a free tool like **CPU-Z** or **Device Info HW** (both on Play Store) can pull them automatically — suggest this rather than making the student guess.
+
+### 2.2 XoDos-Ark Version
+- Ask what version of XoDos-Ark they currently have installed (visible in the app's own About/Settings screen).
+- **Do not assume a specific version is current.** Point them to the official releases page to check for and download the latest build instead of hardcoding a version number anywhere in this workflow:
+  **https://github.com/xodiosx/XoDos-Ark/releases**
+- XoDos-Ark ships new releases frequently (multiple times a week has been observed historically) — a version number that was "latest" when this prompt was written will likely be outdated by the time a classmate reads it. Always defer to the releases page, not this document, for "what's current."
+- Community channels for troubleshooting/updates, if the releases page alone isn't enough: Telegram `t.me/xodemulatorr`, Discord `discord.gg/d2ChVhPfnF`
+
+### 2.3 Distro, Desktop Environment, and Display Server Choice
+- Ask which distro they've picked, or want recommended.
+- Ask which Desktop Environment (DE) they've picked, or want recommended.
+- Ask which display server they're using.
+
+**Recommendation to give by default, unless the student has a specific reason to deviate:**
+
+| Layer | Recommended | Why |
+|---|---|---|
+| Distro | **Debian** | Largest package availability, most predictable `apt`-based installer scripts, best-documented behavior in PRoot/Android contexts |
+| Desktop Environment | **XFCE4** | Lightest resource footprint of the commonly-available DEs, most consistently reported as stable across PRoot setups |
+| Display Server | **X11** | Wayland typically needs direct DRM/KMS kernel access that PRoot containers usually can't get — X11 (via Termux-X11) is the traditional working path |
+
+Everything else — other distros (Arch, Fedora, Ubuntu, Alpine, etc.), other DEs (KDE, GNOME, LXQt, MATE, Cinnamon), or Wayland — should be treated as **optional fallbacks or experiments**, not equal alternatives, unless the student has already independently confirmed a specific combination works well on their device. Heavier DEs like KDE Plasma or GNOME are more likely to be viable only on stronger devices (check RAM and CPU tier from Part 2.1 before recommending them).
+
+Do not hardcode which exact distro/DE/version options are currently selectable inside XoDos-Ark's UI — that list changes as the app updates. Instead:
+- Ask the student to open XoDos-Ark's "Select Environment" and "Desktop Launchers" screens and report what's currently listed, or paste a screenshot.
+- Use that as the current-truth list for their session, and note it may differ from what a classmate on a different app version sees.
+
+### 2.4 Confirm Before Proceeding
+Before running any install commands, summarize back to the student:
+- Device specs as understood
+- XoDos-Ark version as reported
+- Distro + DE + display server chosen
+- Anything being assumed vs. anything confirmed
+
+Get an explicit go-ahead before executing the first real install step. This avoids wasted downloads/installs on a mismatched combination.
+
+---
+
+## Part 3 — Two One-Time Android Prerequisites (do these before installing anything)
+
+These apply regardless of device or distro choice — they're Android-platform-level, not XoDos-Ark-specific.
+
+**1. Disable Phantom Process Killer**
+```
+Settings → About Phone → tap Build Number 7x (enables Developer Options)
+→ Settings → Developer Options → "Disable child process restrictions"
+```
+Since Android 12, Android kills an app's child processes once too many are running at once — even with free RAM available. PRoot spawns a new process per package operation, so `apt`/`dnf`/`pacman` installs can get silently killed partway through without this toggle. This is a known issue across this whole category of app (Termux, Andronix, Debian NoRoot, etc.), not unique to XoDos-Ark or any one phone.
+
+**It resets automatically** if Developer Options ever gets toggled off (e.g. for a banking app that blocks it) and back on — re-enable it each time that happens.
+
+**2. Grant "All Files Access"**
+```
+Settings → Apps → XoDos-Ark → Permissions → Files and media → Allow management of all files
+```
+Without this, file managers and tools inside the container can't see Android's storage folders — this looks like "no phone storage support" when it's actually just a missing permission.
+
+---
+
+## Part 4 — Known Architectural Realities (apply to all devices, not device-specific bugs)
+
+These are structural facts about PRoot-on-Android as a category, not one person's bug reports. The AI should check for these proactively rather than treat them as surprises when they show up.
+
+| Category | What to watch for | Hard or Soft limitation |
+|---|---|---|
+| GPU/hardware acceleration | PRoot containers have historically been blocked from directly accessing `/dev/dri`. Software rendering (`llvmpipe` for OpenGL, `lavapipe` for Vulkan) is the reliable fallback. Newer driver-wrapper systems (Venus/VirGL/Turnip/GL4ES, where available) may improve this — verify per-device, don't assume it works. | Soft — may improve with future releases |
+| Wayland display support | Wayland compositors typically need direct DRM/KMS kernel access that PRoot containers usually can't get. X11 is the traditional working path. | Soft — revisit only once independently confirmed stable |
+| D-Bus / systemd services | PRoot environments typically lack a running system D-Bus and systemd. Desktop environments often need a manual `dbus-daemon --system --fork` step and explicit session environment variables before a GUI renders properly. | Soft — standard, expected workaround |
+| SUID/sudo elevation | Some PRoot filesystems mount `nosuid`, blocking `sudo`/`su` elevation and SUID-sandboxed apps (Chromium, Electron apps). | Soft — workaround is `--no-sandbox` flags, or operating as root directly |
+| musl vs glibc mismatch | Distros using musl libc (Alpine, Chimera, Adelie) may fail to run glibc-compiled binaries like Chromium or VS Code, even with sandbox flags fixed. | Hard — generally not fixable without musl-compiled alternatives |
+| systemd-less distros (Artix, Void, etc.) | Don't assume "no systemd" is automatically better for a stripped-down container — it may mean less precedent for working around PRoot's already-limited init/D-Bus environment, not more. | Untested either way — verify, don't infer |
+| Package-manager-specific installer scripts | DE installer scripts inside XoDos-Ark are generated per-distro (apt/pacman/dnf-based). Always review the actual script pulled from the app's UI before running it — package names and bundled fixes vary between distro families. | N/A — a practice to follow, not a bug |
+
+When giving guidance, the AI should clearly separate:
+- **Confirmed, tested pairing** (independently verified in a PRoot/Android context)
+- **Likely to work based on general Linux knowledge**, but untested in this specific environment
+- **Named risk** (e.g. musl/glibc mismatch) — a real, foreseeable problem, not a guess
+
+Don't present all three with the same confidence level.
+
+---
+
+## Part 5 — When Something Breaks: Getting Unstuck
+
+PRoot-on-Android environments have enough quirks that any student *will* eventually hit something not covered by prior notes. AI assistants are genuinely capable at this kind of troubleshooting — but only with enough context. When a student hits a problem:
+
+- **Paste the exact error output, not a summary.** "Hindi gumagana" or "may error po" gives an AI almost nothing to work with. The literal error text — copy-pasted, not retyped from memory — usually contains the specific clue (missing package, permission path, line number).
+- **State device + distro + DE + display server + XoDos-Ark version** at the start of the troubleshooting message, especially in a fresh conversation with no memory of prior context. This single detail changes what's actually possible to fix.
+- **Say this is a PRoot container on Android**, not a normal Linux install. A fix that works on bare-metal Linux can be flatly impossible under PRoot.
+- **Try one suggested fix at a time.** If given three possible causes, test them one at a time — otherwise, if something works, there's no way to know which change actually fixed it, and no way to record it correctly for next time.
+- **If a fix doesn't work, say so and paste the new output**, rather than restarting the conversation from scratch. The follow-up error is usually more specific and gets to a real fix faster.
+- **Any capable AI can help with this** — Claude, ChatGPT, DeepSeek, Gemini, or others. If one gives an answer that seems too confident about something clearly untested (a common pattern with claims presented as verified results without real basis), it's reasonable to cross-check with a second AI or ask it directly how confident it actually is and why.
+
+---
+
+## Part 6 — Ongoing Support Expectations
+
+Once baseline setup is working, expect the same AI relationship to extend to:
+- Choosing/adjusting distro, DE, or display server combinations as needs change
+- Walking through new installs (dev tools, browsers, editors, etc.)
+- Verifying a setup is actually working correctly (rendering, GPU status, app compatibility) — not just "installed," see Part 7's gotcha about `apt list --installed` lying about configuration completion
+- Diagnosing failures using Part 5's method
+- Iterating on fixes and keeping the student's personal reference file (Part 7) current
+
+Treat each new distro/DE combination as needing its own verification — success with one pairing doesn't guarantee another will behave identically, even within the same distro family, since installer scripts and default package sets differ.
+
+---
+
+## Part 7 — Generate a Personal Reference Markdown After Every Success
+
+**AI: after any successful install, fix, or confirmed-working configuration, offer to create or update a Markdown file for the student**, covering:
+
+- What was done (the actual commands/steps that worked, not a generic description)
+- What device/distro/DE/version this was confirmed on (so the student — or a classmate borrowing this file — knows how directly it applies to their own setup)
+- Any gotchas hit along the way and how they were resolved
+- A short changelog section, so the file stays a living document rather than a one-time record
+
+This file belongs to the student, not to this shared prompt. It should be treated as **higher-confidence than general advice or memory recall**, since it represents real, hands-on, verified results from that student's own device. If a student later pastes this file into a new conversation (including with a completely different AI with no memory of them), the AI should treat it as authoritative for anything it covers, and only fall back to this document's general guidance for anything the personal file doesn't address yet.
+
+Suggested filename pattern: `<YourName>_XoDos_Reference.md` — one growing file per student, not one per session.
+
+---
+
+## Part 8 — Credits and Scope Notes
+
+- XoDos-Ark is built on top of, and explicitly credits, **Termux** and **Termux-X11** as foundational components — it is not an independent reimplementation of these technologies.
+- Distributions are sourced primarily from the `termux/proot-distro` project's mirrors.
+- This document was originally developed through hands-on QCU BSIT coursework setup sessions, then generalized for sharing — it intentionally avoids hardcoding any one person's device specs, distro choice, or XoDos-Ark version so it stays useful as both devices and the app evolve.
+- Use whichever AI you have access to and trust — Claude, ChatGPT, DeepSeek, Gemini, or others are all reasonable choices for this kind of troubleshooting. None of the guidance here is tied to one specific AI provider.
+
+---
+
+*Living document — update Part 2.2's version-check habit and Part 4's architectural table if XoDos-Ark's driver-wrapper system or Wayland support meaningfully changes in a future release.*
+</script>
+
+<script type="text/plain" id="skill-source">---
+name: xodos-ark-environment
+description: >-
+  Support, debug, fix, and recommend for anything involving a student's XoDos-Ark PRoot Linux
+  environment on Android — installing, configuring, or troubleshooting a distro + desktop
+  environment + display server stack for coursework or general dev use. Trigger whenever the
+  student reports something broken, asks how to install or configure a tool inside XoDos-Ark, hits
+  an error in a terminal or GUI app running under it, asks what distro/DE/display combination to
+  use, or asks what the best approach is for something on this kind of setup. Works for any
+  student's device and any XoDos-Ark version — not tied to one specific person's hardware.
+---
+
+# XoDos-Ark Environment Support
+
+A methodology skill scoped to a specific *category* of environment — PRoot-based Linux-on-Android
+via XoDos-Ark — not a generic "any Linux setup" skill, and not hardcoded to one student's device.
+The goal is accurate, current support that adapts to whoever is asking, without re-deriving
+problems that are commonly already solved, and without asserting device- or version-specific
+specifics that haven't been confirmed for *this* student.
+
+## Ground rule — the student's own reference, not assumption, is the source of truth
+
+Different students run different devices, distros, desktop environments, and XoDos-Ark versions.
+Before answering anything beyond a stable architecture fact (below), work from what's actually
+confirmed for this student in this conversation — not from a template setup, not from memory of a
+different student, and not from what "usually" works elsewhere.
+
+- **If the student has a personal reference markdown** (their own living setup/changelog doc,
+  however named), treat it as ground truth for their specific environment — higher-confidence than
+  general advice, since it reflects real, tested results on their actual device.
+- **If you have memory of this student from past sessions**, recall what's already known (device,
+  distro, DE, display server, XoDos-Ark version, prior fixes) before asking anything. Only ask about
+  what's missing or likely to have drifted — XoDos-Ark versions and package states change often
+  enough that a stale confirmation is worth a quick re-check, but a student's device model or
+  chosen distro almost never changes and shouldn't be re-asked once known.
+- **If neither exists** (new student, memory unavailable, first time this environment comes up),
+  ask for the baseline before proceeding: device specs (chipset, GPU, RAM, storage, Android
+  version, arm64 confirmed), current XoDos-Ark version, and chosen/desired distro + desktop
+  environment + display server. Don't guess and proceed as if confirmed — mismatched assumptions
+  waste real install time on a mobile device.
+- Never hardcode a specific XoDos-Ark version number as "current" anywhere in a response — versions
+  change frequently. Point to the releases page instead: `https://github.com/xodiosx/XoDos-Ark/releases`
+
+## Stable architecture facts (safe without checking anything student-specific)
+
+Hard constraints of the platform itself, true for any device or distro running under it — these
+don't change unless the underlying Android kernel or XoDos-Ark's core architecture does:
+
+- This is a PRoot container hosted on Android — not a normal Linux install, and not root-level
+  access to the device. Anything assuming real kernel access, a running systemd, or hardware-level
+  control needs a PRoot-aware answer, not a stock Linux one.
+- `sudo`/`su` elevation is commonly blocked on filesystems mounted `nosuid`, which is typical in
+  this kind of container — an architectural limitation on many devices, not always a fixable bug.
+  Confirm per-device rather than assuming either way; the workaround where it applies is operating
+  as root directly rather than continuing to chase `sudo`.
+- Wine/Box64 are confirmed impossible on Android SDK 34+ — don't propose them as a fix path on
+  affected devices.
+- Display resolution requires a manual empirical process per device (native resolution → ratio →
+  scale-down → account for the on-screen keyboard-bar offset) — there's no universal fixed number
+  to hand any given student; it has to be derived from their own screen.
+- GPU/Vulkan rendering defaults to software fallback (llvmpipe/lavapipe-style) inside the container
+  on most devices. Treat hardware acceleration as unconfirmed for any given app or device unless
+  independently verified for that specific student's setup — newer driver-wrapper systems in recent
+  XoDos-Ark versions may improve this, but that's a per-device thing to test, not assume.
+- Two Android-level prerequisites apply regardless of device: disabling the Phantom Process Killer
+  (Developer Options → "Disable child process restrictions," resets if Developer Options is ever
+  toggled off and back on) and granting XoDos-Ark "All Files Access" (Files and media permission).
+  Missing either produces symptoms that look like deeper bugs but aren't.
+
+## Default recommendation (when a student hasn't chosen yet, or asks what to use)
+
+Unless the student has a specific reason to deviate, or has already independently confirmed a
+different combination works well on their device:
+
+| Layer | Recommend | Why |
+|---|---|---|
+| Distro | Debian | Largest package availability, most predictable `apt`-based installer scripts |
+| Desktop Environment | XFCE4 | Lightest resource footprint among commonly available DEs |
+| Display Server | X11 | Wayland typically needs direct DRM/KMS access PRoot containers usually lack |
+
+Everything else (Arch, Fedora, Ubuntu, Alpine, other DEs, Wayland) is an optional fallback or
+experiment, not an equal alternative — flag it as such rather than presenting all options with
+equal confidence. Heavier DEs (KDE, GNOME) are more viable only on stronger devices; check the
+student's RAM/CPU tier before recommending them.
+
+## Workflow
+
+1. **Establish what's actually confirmed for this student** before diagnosing or recommending —
+   their reference file if they have one, memory if available, otherwise ask (see Ground rule).
+   Don't diagnose from a template setup or a different student's known-good state.
+2. **Check any student-provided reference file's own Troubleshooting/Changelog section before
+   proposing a new fix.** A number of real bugs in this category turn out to be already-documented
+   once traced (`exo-open` launch-path issues, PWA sandbox flags, a service running as root when it
+   shouldn't be) — re-solving a known issue from scratch wastes time and risks a worse fix than one
+   already tested.
+3. **Get the exact error text, not a description of it**, and confirm which distro/DE/display
+   combination and which step the issue is happening in. This is the actual difference between
+   diagnosing and guessing, especially across devices that don't behave identically.
+4. **Test one fix at a time.** When multiple causes are plausible, don't bundle changes — isolate
+   which one actually worked so it can be recorded with confidence.
+5. **For "what's best" questions, default to whatever the student's own reference already lists as
+   confirmed-working** on their device, over introducing something untested, unless they're
+   explicitly asking to explore an alternative. Don't re-suggest paths they've already tried and
+   dropped without a genuinely new reason it would behave differently now.
+6. **After a fix is confirmed working, offer to write or update a changelog-style entry** in the
+   student's personal reference file (what broke, root cause if known, the fix, where it belongs)
+   rather than just stating the fix and moving on — this is what keeps a student's reference useful
+   across sessions and shareable with classmates or a different AI later.
+7. **Keep changes minimal and reversible.** Prefer the smallest working change over a broad
+   rewrite, and flag anything that isn't easily undoable before suggesting it.
+8. **Separate confidence levels explicitly** when giving guidance: a confirmed, tested pairing (for
+   this student's device, or independently verified in a PRoot/Android context generally) vs.
+   likely-to-work based on general Linux knowledge but untested here vs. a named, foreseeable risk
+   (e.g. musl/glibc mismatch on Alpine/Chimera/Adelie). Don't present all three with equal certainty.
+
+## Explicitly out of scope
+
+- Scaffolding a brand-new, unrelated project folder or toolchain for a future course — that's
+  simple file/folder bookkeeping, not environment support, and doesn't need this skill's process.
+- Recommending or debugging a *non*-PRoot, non-XoDos-Ark setup (e.g. a native Linux laptop install,
+  a different Android Linux app) — this skill is scoped to the XoDos-Ark PRoot category
+  specifically, not Linux-on-mobile in general.
+</script>
+
+<script>
+(function(){
+  // ---------- Hero boot animation ----------
+  var bootLines = [
+    {t:'$ whoami', cls:'prompt'},
+    {t:'guest@your-device', cls:'line'},
+    {t:'$ checking architecture...', cls:'prompt'},
+    {t:'arm64 detected — ✓', cls:'ok'},
+    {t:'$ checking storage...', cls:'prompt'},
+    {t:'4.1GB free — ✓', cls:'ok'},
+    {t:'$ launching startxfce4...', cls:'prompt'},
+    {t:'Desktop environment ready.', cls:'ok'}
+  ];
+  var termEl = document.getElementById('bootTerminal');
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function renderStatic(){
+    termEl.innerHTML = bootLines.map(function(l){
+      return '<div class="line ' + l.cls + '">' + l.t + '</div>';
+    }).join('') + '<span class="cursor"></span>';
+  }
+
+  function typeLine(container, text, cls, done){
+    var div = document.createElement('div');
+    div.className = 'line ' + cls;
+    container.appendChild(div);
+    var i = 0;
+    (function step(){
+      div.textContent = text.slice(0, i);
+      i++;
+      if(i <= text.length){
+        setTimeout(step, 14);
+      } else if(done){
+        done();
+      }
+    })();
+  }
+
+  function runBoot(){
+    termEl.innerHTML = '';
+    var idx = 0;
+    function next(){
+      if(idx >= bootLines.length){
+        var cur = document.createElement('span');
+        cur.className = 'cursor';
+        termEl.appendChild(cur);
+        return;
+      }
+      var l = bootLines[idx];
+      idx++;
+      typeLine(termEl, l.t, l.cls, function(){ setTimeout(next, 160); });
+    }
+    next();
+  }
+
+  if(reduceMotion){ renderStatic(); } else { runBoot(); }
+
+  // ---------- Copy buttons on code blocks ----------
+  document.querySelectorAll('.copy-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var text = btn.getAttribute('data-copy');
+      if(!text) return;
+      navigator.clipboard.writeText(text).then(function(){
+        var original = btn.textContent;
+        btn.textContent = 'Copied';
+        btn.classList.add('copied');
+        setTimeout(function(){
+          btn.textContent = original;
+          btn.classList.remove('copied');
+        }, 1600);
+      });
+    });
+  });
+
+  // ---------- Prompt / Skill copy + download ----------
+  var promptText = document.getElementById('prompt-source').textContent.trim();
+  var skillText = document.getElementById('skill-source').textContent.trim();
+
+  function downloadText(filename, text){
+    var blob = new Blob([text], {type:'text/markdown'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 500);
+  }
+
+  function wireCopyButton(id, text){
+    var btn = document.getElementById(id);
+    if(!btn) return;
+    btn.addEventListener('click', function(){
+      navigator.clipboard.writeText(text).then(function(){
+        var original = btn.textContent;
+        btn.textContent = 'Copied ✓';
+        btn.classList.add('copied');
+        setTimeout(function(){
+          btn.textContent = original;
+          btn.classList.remove('copied');
+        }, 1800);
+      });
+    });
+  }
+
+  wireCopyButton('copyPrompt', promptText);
+  wireCopyButton('copySkill', skillText);
+
+  document.getElementById('downloadPrompt').addEventListener('click', function(){
+    downloadText('XoDos-Ark-AI-Operating-Prompt.md', promptText);
+  });
+  document.getElementById('downloadSkill').addEventListener('click', function(){
+    downloadText('xodos-ark-environment-SKILL.md', skillText);
+  });
+
+  // ---------- Scroll spy: top nav + stack rail ----------
+  var sections = Array.prototype.slice.call(document.querySelectorAll('main section[id]'));
+  var topLinks = Array.prototype.slice.call(document.querySelectorAll('.topnav a'));
+  var railItems = Array.prototype.slice.call(document.querySelectorAll('.stack-rail li'));
+
+  function setActive(id){
+    topLinks.forEach(function(a){
+      a.classList.toggle('active', a.getAttribute('href') === '#' + id);
+    });
+    railItems.forEach(function(li){
+      li.classList.toggle('active', li.getAttribute('data-target') === id);
+    });
+  }
+
+  if('IntersectionObserver' in window){
+    var observer = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        if(entry.isIntersecting){
+          setActive(entry.target.id);
+        }
+      });
+    }, {rootMargin: '-40% 0px -55% 0px', threshold: 0});
+    sections.forEach(function(s){ observer.observe(s); });
+  }
+
+  railItems.forEach(function(li){
+    li.querySelector('button').addEventListener('click', function(){
+      var id = li.getAttribute('data-target');
+      var el = document.getElementById(id);
+      if(el) el.scrollIntoView({behavior: reduceMotion ? 'auto' : 'smooth', block: 'start'});
+    });
+  });
+
+  setActive('start');
+})();
+</script>
+
+</body>
+</html>
